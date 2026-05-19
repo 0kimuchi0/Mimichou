@@ -122,7 +122,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '14px',
     fontSize: '16px',
     cursor: 'pointer',
-    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
+    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
     letterSpacing: '0.08em',
     marginTop: '4px',
   },
@@ -224,7 +224,7 @@ export function BGM() {
 
   return (
     <div style={s.root}>
-      <h2 style={{ margin: '0 0 20px', fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif', fontSize: '22px' }}>
+      <h2 style={{ margin: '0 0 20px', fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif', fontSize: '22px' }}>
         BGM セレクター
       </h2>
 

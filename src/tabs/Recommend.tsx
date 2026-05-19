@@ -39,7 +39,7 @@ const s: Record<string, React.CSSProperties> = {
   title: {
     margin: 0,
     fontSize: '20px',
-    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
+    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
   },
   body: {
     flex: 1,

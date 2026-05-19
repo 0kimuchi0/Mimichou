@@ -60,7 +60,7 @@ const styles: Record<string, React.CSSProperties> = {
     color: '#f5f0e8',
     letterSpacing: '0.05em',
     margin: '0 0 2px',
-    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif'
+    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif'
   },
   appSubtitle: {
     fontSize: '11px',
@@ -100,7 +100,7 @@ const styles: Record<string, React.CSSProperties> = {
   tabLabel: {
     fontSize: '15px',
     fontWeight: '600',
-    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
+    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
     letterSpacing: '0.05em',
     lineHeight: 1
   },
