@@ -315,7 +315,7 @@ export function Recommend() {
 
         {/* Wishlist sidebar */}
         <div style={s.wishlistPane}>
-          <div style={s.wishlistHeader}>気になる 🎵</div>
+          <div style={s.wishlistHeader}>気になる</div>
           <div style={s.wishlistItems}>
             {wishlist.length === 0 && (
               <div style={{ color: C.textDim, fontSize: '12px', textAlign: 'center', marginTop: '16px' }}>

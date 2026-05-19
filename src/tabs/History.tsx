@@ -182,7 +182,11 @@ export function History() {
         <div style={{ width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
           {/* Title */}
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '40px', marginBottom: '8px' }}>🎵</div>
+            <div style={{ marginBottom: '12px' }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(192,57,43,0.7)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+              </svg>
+            </div>
             <div style={{ fontSize: '22px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text, marginBottom: '6px' }}>
               音楽履歴を読み込む
             </div>
@@ -200,7 +204,7 @@ export function History() {
               padding: '20px 24px',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                <span style={{ fontSize: '20px' }}>⚡</span>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1DB954" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
                 <span style={{ fontSize: '15px', fontWeight: '700', color: '#1DB954' }}>方法①　Spotify でログイン（自動取得）</span>
               </div>
               <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.8', marginBottom: '16px' }}>
@@ -236,7 +240,7 @@ export function History() {
             padding: '20px 24px',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <span style={{ fontSize: '20px' }}>📂</span>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(245,240,232,0.7)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
               <span style={{ fontSize: '15px', fontWeight: '700', color: C.text }}>
                 {getClientId() ? '方法②　ファイルを読み込む（全履歴・推奨）' : '履歴ファイルを読み込む'}
               </span>

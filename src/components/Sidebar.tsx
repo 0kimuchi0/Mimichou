@@ -8,10 +8,34 @@ interface SidebarProps {
   hasData: boolean
 }
 
-const tabs: Array<{ id: Tab; icon: string; label: string; sublabel: string }> = [
-  { id: 'history', icon: '📜', label: '音歴', sublabel: 'History' },
-  { id: 'recommend', icon: '🎵', label: '推薦', sublabel: 'Recommend' },
-  { id: 'bgm', icon: '🎧', label: 'BGM', sublabel: 'Now Playing' }
+const IconHistory = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+    <path d="M3 3v5h5"/>
+    <path d="M12 7v5l4 2"/>
+  </svg>
+)
+
+const IconRecommend = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+    <path d="M12 17h.01"/>
+  </svg>
+)
+
+const IconBGM = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 18V5l12-2v13"/>
+    <circle cx="6" cy="18" r="3"/>
+    <circle cx="18" cy="16" r="3"/>
+  </svg>
+)
+
+const tabs: Array<{ id: Tab; Icon: React.FC; label: string; sublabel: string }> = [
+  { id: 'history', Icon: IconHistory, label: '音歴', sublabel: 'History' },
+  { id: 'recommend', Icon: IconRecommend, label: '推薦', sublabel: 'Recommend' },
+  { id: 'bgm', Icon: IconBGM, label: 'BGM', sublabel: 'Now Playing' }
 ]
 
 const styles: Record<string, React.CSSProperties> = {
@@ -137,7 +161,7 @@ export function Sidebar({ activeTab, onTabChange, hasData }: SidebarProps) {
               title={isDisabled ? '音歴データを読み込んでください' : undefined}
             >
               {isActive && <div style={styles.activeIndicator} />}
-              <span style={styles.tabIcon}>{tab.icon}</span>
+              <span style={{ ...styles.tabIcon, color: isActive ? '#f5f0e8' : 'rgba(245,240,232,0.5)' }}><tab.Icon /></span>
               <span style={styles.tabText}>
                 <span
                   style={{
