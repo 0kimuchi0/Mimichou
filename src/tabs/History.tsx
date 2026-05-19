@@ -47,7 +47,7 @@ const s: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     marginBottom: '16px',
     margin: '0 0 16px',
-    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
   },
   table: {
     width: '100%',
@@ -84,7 +84,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '12px 24px',
     fontSize: '15px',
     cursor: 'pointer',
-    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
     letterSpacing: '0.05em',
   },
   statsRow: {
@@ -105,7 +105,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '24px',
     fontWeight: '700',
     color: C.text,
-    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
+    fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
   },
   statLabel: {
     fontSize: '11px',
@@ -187,7 +187,7 @@ export function History() {
                 <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
               </svg>
             </div>
-            <div style={{ fontSize: '22px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text, marginBottom: '6px' }}>
+            <div style={{ fontSize: '22px', fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif', color: C.text, marginBottom: '6px' }}>
               音楽履歴を読み込む
             </div>
             <div style={{ fontSize: '13px', color: C.textMuted }}>
@@ -266,7 +266,7 @@ export function History() {
               fontWeight: '600',
               cursor: loading || spotifyLoading ? 'not-allowed' : 'pointer',
               opacity: loading || spotifyLoading ? 0.6 : 1,
-              fontFamily: '"Hiragino Mincho ProN", serif',
+              fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif',
             }}>
               {loading ? '読み込み中...' : 'ファイルを選択'}
               <input
@@ -308,7 +308,7 @@ export function History() {
     <div style={s.root}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
+        <h2 style={{ margin: 0, fontFamily: '"Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif', fontSize: '22px' }}>
           音楽履歴レポート
         </h2>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
