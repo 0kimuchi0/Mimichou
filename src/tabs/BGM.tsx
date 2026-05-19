@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { getApi, BGM_SYSTEM_PROMPT } from '../lib/claude'
+import { claudeChatStream, BGM_SYSTEM_PROMPT } from '../lib/claude'
 import { useAppContext } from '../App'
 
 const C = {
@@ -195,34 +195,26 @@ export function BGM() {
       situation ? `状況: ${situation}` : null,
     ].filter(Boolean).join('\n')
 
-    const api = getApi()
     const systemPrompt = BGM_SYSTEM_PROMPT(listeningProfile)
     let buffer = ''
 
     setResult({ raw: '', artists: [] })
 
-    api.onStreamChunk((chunk) => {
-      buffer += chunk
-      setResult({ raw: buffer, artists: [] })
-    })
-
-    api.onStreamEnd(() => {
-      setStreaming(false)
+    try {
+      for await (const chunk of claudeChatStream(
+        [{ role: 'user', content: userMessage }],
+        systemPrompt
+      )) {
+        buffer += chunk
+        setResult({ raw: buffer, artists: [] })
+      }
       setResult({ raw: buffer, artists: extractArtists(buffer) })
-      api.removeStreamListeners()
-    })
-
-    api.onStreamError((err) => {
-      setStreaming(false)
-      setError(err)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
       setResult(null)
-      api.removeStreamListeners()
-    })
-
-    await api.claudeChatStream(
-      [{ role: 'user', content: userMessage }],
-      systemPrompt
-    )
+    } finally {
+      setStreaming(false)
+    }
   }
 
   function openSpotify(artist: string) {
