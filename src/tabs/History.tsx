@@ -1,10 +1,17 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts'
 import { parseFiles, buildListeningProfile, formatMinutes, type ParsedData } from '../lib/parser'
 import { useAppContext } from '../App'
+import {
+  startSpotifyLogin,
+  handleOAuthCallback,
+  fetchRecentlyPlayed,
+  convertToSpotifyEntries,
+  getClientId,
+} from '../lib/spotify'
 
 const C = {
   bg: '#1a1a2e',
@@ -120,6 +127,30 @@ export function History() {
   const { parsedData, setParsedData, setListeningProfile } = useAppContext()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [spotifyLoading, setSpotifyLoading] = useState(false)
+  const [spotifyError, setSpotifyError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('code')
+    if (!code) return
+
+    // Remove code from URL without reload
+    window.history.replaceState({}, '', '/')
+
+    setSpotifyLoading(true)
+    handleOAuthCallback(code)
+      .then(token => fetchRecentlyPlayed(token))
+      .then(items => {
+        if (items.length === 0) throw new Error('再生履歴がありません')
+        const files = convertToSpotifyEntries(items)
+        const data = parseFiles(files)
+        setParsedData(data)
+        setListeningProfile(buildListeningProfile(data))
+      })
+      .catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))
+      .finally(() => setSpotifyLoading(false))
+  }, [])
 
   async function handleLoadFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -156,6 +187,20 @@ export function History() {
           <div style={{ fontSize: '13px', color: C.textMuted, textAlign: 'center', maxWidth: '320px' }}>
             Spotifyからエクスポートした<br />Streaming_History_Audio_*.json を選択してください
           </div>
+          {getClientId() && (
+            <button
+              style={{
+                ...s.loadBtn,
+                background: '#1DB954',
+                color: '#000',
+                fontWeight: '700',
+              }}
+              onClick={() => startSpotifyLogin().catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))}
+              disabled={loading || spotifyLoading}
+            >
+              {spotifyLoading ? '取得中...' : 'Spotify でログイン（自動取得）'}
+            </button>
+          )}
           <label style={{ ...s.loadBtn, display: 'inline-block' }}>
             {loading ? '読み込み中...' : 'ファイルを選択'}
             <input
@@ -167,6 +212,7 @@ export function History() {
               disabled={loading}
             />
           </label>
+          {spotifyError && <div style={{ color: '#1DB954', fontSize: '13px' }}>{spotifyError}</div>}
           {error && <div style={{ color: C.accent, fontSize: '13px' }}>{error}</div>}
         </div>
       </div>
@@ -199,17 +245,39 @@ export function History() {
         <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
           音楽履歴レポート
         </h2>
-        <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block' }}>
-          再読み込み
-          <input
-            type="file"
-            multiple
-            accept=".json"
-            style={{ display: 'none' }}
-            onChange={handleLoadFiles}
-          />
-        </label>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          {getClientId() && (
+            <button
+              style={{
+                ...s.loadBtn,
+                padding: '8px 16px',
+                fontSize: '13px',
+                background: '#1DB954',
+                color: '#000',
+                fontWeight: '700',
+              }}
+              onClick={() => startSpotifyLogin().catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))}
+              disabled={spotifyLoading}
+            >
+              {spotifyLoading ? '取得中...' : 'Spotify 再取得'}
+            </button>
+          )}
+          <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block' }}>
+            再読み込み
+            <input
+              type="file"
+              multiple
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={handleLoadFiles}
+            />
+          </label>
+        </div>
       </div>
+
+      {spotifyError && (
+        <div style={{ color: '#1DB954', fontSize: '13px', marginBottom: '12px' }}>{spotifyError}</div>
+      )}
 
       {/* Stats summary */}
       <div style={s.statsRow}>
