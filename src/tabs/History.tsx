@@ -191,7 +191,7 @@ export function History() {
               音楽履歴を読み込む
             </div>
             <div style={{ fontSize: '13px', color: C.textMuted }}>
-              2つの方法で Spotify の再生履歴を取り込めます
+              複数サービスの再生履歴を取り込めます
             </div>
           </div>
 
@@ -245,15 +245,33 @@ export function History() {
                 {getClientId() ? '方法②　ファイルを読み込む（全履歴・推奨）' : '履歴ファイルを読み込む'}
               </span>
             </div>
+            {/* 対応サービス badges */}
+            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '14px' }}>
+              {(['Spotify', 'Apple Music', 'YouTube Music', 'Amazon Music'] as const).map(svc => (
+                <span key={svc} style={{
+                  fontSize: '11px',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  border: `1px solid ${C.border}`,
+                  color: C.textMuted,
+                  background: 'rgba(192,57,43,0.08)',
+                  letterSpacing: '0.04em',
+                }}>{svc}</span>
+              ))}
+            </div>
             <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.8', marginBottom: '16px' }}>
-              Spotify から<strong style={{ color: C.text }}>数年分の全再生履歴</strong>を取り込めます。分析精度が高く、すべての機能をフル活用できます。<br />
-              ただし、事前にデータを入手する必要があります（申請から受け取りまで数日かかります）。
+              各サービスから<strong style={{ color: C.text }}>数年分の全再生履歴</strong>を取り込めます。分析精度が高く、すべての機能をフル活用できます。<br />
+              事前にデータを入手する必要があります（申請から受け取りまで数日かかる場合があります）。
               <br /><br />
-              <strong style={{ color: C.text }}>データの入手方法：</strong><br />
-              1. <a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener noreferrer" style={{ color: C.accent }}>Spotify プライバシー設定</a> を開く<br />
-              2.「拡張ストリーミング履歴」をリクエスト<br />
-              3. 数日後に届くメールからダウンロード<br />
-              4. ZIP を展開し、<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Streaming_History_Audio_*.json</code> を選択
+              <strong style={{ color: C.text }}>対応サービス：</strong><br />
+              <strong>Spotify</strong>: プライバシーセンター → 拡張ストリーミング履歴
+              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Streaming_History_Audio_*.json</code>)<br />
+              <strong>Apple Music</strong>: appleid.apple.com → データとプライバシー
+              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Apple Music Play Activity.csv</code>)<br />
+              <strong>YouTube Music</strong>: Google Takeout → YouTube Music
+              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>watch-history.json</code>)<br />
+              <strong>Amazon Music</strong>: カスタマーサービスへリクエスト
+              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>AmazonMusic*.csv</code>)
             </div>
             <label style={{
               display: 'inline-block',
@@ -272,7 +290,7 @@ export function History() {
               <input
                 type="file"
                 multiple
-                accept=".json"
+                accept=".json,.csv"
                 style={{ display: 'none' }}
                 onChange={handleLoadFiles}
                 disabled={loading || spotifyLoading}
@@ -333,7 +351,7 @@ export function History() {
             <input
               type="file"
               multiple
-              accept=".json"
+              accept=".json,.csv"
               style={{ display: 'none' }}
               onChange={handleLoadFiles}
             />
