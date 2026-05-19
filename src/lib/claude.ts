@@ -3,33 +3,50 @@ export interface Message {
   content: string
 }
 
-export interface ClaudeAPI {
-  openFiles: () => Promise<Array<{ name: string; content: string }>>
-  claudeChat: (
-    messages: Message[],
-    systemPrompt: string
-  ) => Promise<{ success: boolean; content?: string; error?: string }>
-  claudeChatStream: (
-    messages: Message[],
-    systemPrompt: string
-  ) => Promise<{ success: boolean; error?: string }>
-  onStreamChunk: (callback: (text: string) => void) => void
-  onStreamEnd: (callback: () => void) => void
-  onStreamError: (callback: (error: string) => void) => void
-  removeStreamListeners: () => void
+export async function claudeChat(
+  messages: Message[],
+  systemPrompt: string
+): Promise<string> {
+  const res = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, systemPrompt, stream: false }),
+  })
+  const data = await res.json()
+  return data.content
 }
 
-declare global {
-  interface Window {
-    api: ClaudeAPI
-  }
-}
+export async function* claudeChatStream(
+  messages: Message[],
+  systemPrompt: string
+): AsyncGenerator<string> {
+  const res = await fetch('/api/claude', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messages, systemPrompt, stream: true }),
+  })
 
-export function getApi(): ClaudeAPI {
-  if (!window.api) {
-    throw new Error('Electron API not available')
+  const reader = res.body!.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const data = line.slice(6)
+        if (data === '[DONE]') return
+        try {
+          const parsed = JSON.parse(data)
+          if (parsed.text) yield parsed.text
+        } catch {}
+      }
+    }
   }
-  return window.api
 }
 
 export const RECOMMEND_SYSTEM_PROMPT = (profile: string) => `あなたは音楽の専門家です。ユーザーのSpotifyリスニング履歴に基づいて、アルバムを推薦してください。

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { getApi, RECOMMEND_SYSTEM_PROMPT, type Message } from '../lib/claude'
+import { claudeChatStream, RECOMMEND_SYSTEM_PROMPT, type Message } from '../lib/claude'
 import { useAppContext } from '../App'
 
 const C = {
@@ -180,43 +180,35 @@ export function Recommend() {
     setInput('')
     setStreaming(true)
 
-    const api = getApi()
     const systemPrompt = RECOMMEND_SYSTEM_PROMPT(listeningProfile)
 
     let buffer = ''
     setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
-    api.onStreamChunk((chunk) => {
-      buffer += chunk
-      setMessages(prev => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { role: 'assistant', content: buffer }
-        return updated
-      })
-    })
-
-    api.onStreamEnd(() => {
-      setStreaming(false)
-      api.removeStreamListeners()
-    })
-
-    api.onStreamError((err) => {
-      setStreaming(false)
+    try {
+      for await (const chunk of claudeChatStream(
+        newMessages.map(m => ({ role: m.role, content: m.content })),
+        systemPrompt
+      )) {
+        buffer += chunk
+        setMessages(prev => {
+          const updated = [...prev]
+          updated[updated.length - 1] = { role: 'assistant', content: buffer }
+          return updated
+        })
+      }
+    } catch (err) {
       setMessages(prev => {
         const updated = [...prev]
         updated[updated.length - 1] = {
           role: 'assistant',
-          content: `エラーが発生しました: ${err}`
+          content: `エラーが発生しました: ${err instanceof Error ? err.message : String(err)}`
         }
         return updated
       })
-      api.removeStreamListeners()
-    })
-
-    await api.claudeChatStream(
-      newMessages.map(m => ({ role: m.role, content: m.content })),
-      systemPrompt
-    )
+    } finally {
+      setStreaming(false)
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

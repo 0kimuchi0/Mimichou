@@ -4,7 +4,6 @@ import {
   LineChart, Line
 } from 'recharts'
 import { parseFiles, buildListeningProfile, formatMinutes, type ParsedData } from '../lib/parser'
-import { getApi } from '../lib/claude'
 import { useAppContext } from '../App'
 
 const C = {
@@ -122,17 +121,21 @@ export function History() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleLoadFiles() {
+  async function handleLoadFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
     setLoading(true)
     setError(null)
     try {
-      const api = getApi()
-      const files = await api.openFiles()
-      if (files.length === 0) {
-        setLoading(false)
-        return
-      }
-      const data = parseFiles(files)
+      const fileContents = await Promise.all(
+        files.map(f => new Promise<{ name: string; content: string }>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve({ name: f.name, content: reader.result as string })
+          reader.onerror = reject
+          reader.readAsText(f)
+        }))
+      )
+      const data = parseFiles(fileContents)
       setParsedData(data)
       setListeningProfile(buildListeningProfile(data))
     } catch (e) {
@@ -153,9 +156,17 @@ export function History() {
           <div style={{ fontSize: '13px', color: C.textMuted, textAlign: 'center', maxWidth: '320px' }}>
             Spotifyからエクスポートした<br />Streaming_History_Audio_*.json を選択してください
           </div>
-          <button style={s.loadBtn} onClick={handleLoadFiles} disabled={loading}>
+          <label style={{ ...s.loadBtn, display: 'inline-block' }}>
             {loading ? '読み込み中...' : 'ファイルを選択'}
-          </button>
+            <input
+              type="file"
+              multiple
+              accept=".json"
+              style={{ display: 'none' }}
+              onChange={handleLoadFiles}
+              disabled={loading}
+            />
+          </label>
           {error && <div style={{ color: C.accent, fontSize: '13px' }}>{error}</div>}
         </div>
       </div>
@@ -188,12 +199,16 @@ export function History() {
         <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
           音楽履歴レポート
         </h2>
-        <button
-          style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px' }}
-          onClick={handleLoadFiles}
-        >
+        <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block' }}>
           再読み込み
-        </button>
+          <input
+            type="file"
+            multiple
+            accept=".json"
+            style={{ display: 'none' }}
+            onChange={handleLoadFiles}
+          />
+        </label>
       </div>
 
       {/* Stats summary */}
