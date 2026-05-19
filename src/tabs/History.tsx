@@ -178,42 +178,104 @@ export function History() {
 
   if (!parsedData) {
     return (
-      <div style={{ ...s.root, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={s.emptyState}>
-          <div style={{ fontSize: '48px' }}>🎵</div>
-          <div style={{ fontSize: '20px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text }}>
-            音楽履歴を読み込む
+      <div style={{ ...s.root, overflowY: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '40px' }}>
+        <div style={{ width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          {/* Title */}
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '40px', marginBottom: '8px' }}>🎵</div>
+            <div style={{ fontSize: '22px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text, marginBottom: '6px' }}>
+              音楽履歴を読み込む
+            </div>
+            <div style={{ fontSize: '13px', color: C.textMuted }}>
+              2つの方法で Spotify の再生履歴を取り込めます
+            </div>
           </div>
-          <div style={{ fontSize: '13px', color: C.textMuted, textAlign: 'center', maxWidth: '320px' }}>
-            Spotifyからエクスポートした<br />Streaming_History_Audio_*.json を選択してください
-          </div>
+
+          {/* Option A: Spotify Login */}
           {getClientId() && (
-            <button
-              style={{
-                ...s.loadBtn,
-                background: '#1DB954',
-                color: '#000',
-                fontWeight: '700',
-              }}
-              onClick={() => startSpotifyLogin().catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))}
-              disabled={loading || spotifyLoading}
-            >
-              {spotifyLoading ? '取得中...' : 'Spotify でログイン（自動取得）'}
-            </button>
+            <div style={{
+              background: 'rgba(29,185,84,0.08)',
+              border: '1px solid rgba(29,185,84,0.3)',
+              borderRadius: '10px',
+              padding: '20px 24px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '20px' }}>⚡</span>
+                <span style={{ fontSize: '15px', fontWeight: '700', color: '#1DB954' }}>方法①　Spotify でログイン（自動取得）</span>
+              </div>
+              <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.8', marginBottom: '16px' }}>
+                ボタンひとつで今すぐ使えます。ただし Spotify API の制限により、<strong style={{ color: C.text }}>直近 50〜250 曲程度</strong>（ここ数日〜数週間分）しか取得できません。<br />
+                年別グラフや「懐かしのアーティスト」など長期分析には向きませんが、推薦・BGM 機能はすぐに試せます。
+              </div>
+              <button
+                style={{
+                  background: '#1DB954',
+                  color: '#000',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '11px 24px',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: spotifyLoading || loading ? 'not-allowed' : 'pointer',
+                  opacity: spotifyLoading || loading ? 0.6 : 1,
+                }}
+                onClick={() => startSpotifyLogin().catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))}
+                disabled={loading || spotifyLoading}
+              >
+                {spotifyLoading ? '取得中...' : '▶ Spotify でログイン'}
+              </button>
+              {spotifyError && <div style={{ color: C.accent, fontSize: '12px', marginTop: '8px' }}>{spotifyError}</div>}
+            </div>
           )}
-          <label style={{ ...s.loadBtn, display: 'inline-block' }}>
-            {loading ? '読み込み中...' : 'ファイルを選択'}
-            <input
-              type="file"
-              multiple
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleLoadFiles}
-              disabled={loading}
-            />
-          </label>
-          {spotifyError && <div style={{ color: '#1DB954', fontSize: '13px' }}>{spotifyError}</div>}
-          {error && <div style={{ color: C.accent, fontSize: '13px' }}>{error}</div>}
+
+          {/* Option B: File Upload */}
+          <div style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: '10px',
+            padding: '20px 24px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <span style={{ fontSize: '20px' }}>📂</span>
+              <span style={{ fontSize: '15px', fontWeight: '700', color: C.text }}>
+                {getClientId() ? '方法②　ファイルを読み込む（全履歴・推奨）' : '履歴ファイルを読み込む'}
+              </span>
+            </div>
+            <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.8', marginBottom: '16px' }}>
+              Spotify から<strong style={{ color: C.text }}>数年分の全再生履歴</strong>を取り込めます。分析精度が高く、すべての機能をフル活用できます。<br />
+              ただし、事前にデータを入手する必要があります（申請から受け取りまで数日かかります）。
+              <br /><br />
+              <strong style={{ color: C.text }}>データの入手方法：</strong><br />
+              1. <a href="https://www.spotify.com/account/privacy/" target="_blank" rel="noopener noreferrer" style={{ color: C.accent }}>Spotify プライバシー設定</a> を開く<br />
+              2.「拡張ストリーミング履歴」をリクエスト<br />
+              3. 数日後に届くメールからダウンロード<br />
+              4. ZIP を展開し、<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Streaming_History_Audio_*.json</code> を選択
+            </div>
+            <label style={{
+              display: 'inline-block',
+              background: C.accent,
+              color: C.text,
+              border: 'none',
+              borderRadius: '6px',
+              padding: '11px 24px',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: loading || spotifyLoading ? 'not-allowed' : 'pointer',
+              opacity: loading || spotifyLoading ? 0.6 : 1,
+              fontFamily: '"Hiragino Mincho ProN", serif',
+            }}>
+              {loading ? '読み込み中...' : 'ファイルを選択'}
+              <input
+                type="file"
+                multiple
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={handleLoadFiles}
+                disabled={loading || spotifyLoading}
+              />
+            </label>
+            {error && <div style={{ color: C.accent, fontSize: '12px', marginTop: '8px' }}>{error}</div>}
+          </div>
         </div>
       </div>
     )
