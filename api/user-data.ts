@@ -65,11 +65,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!verifiedUser) return res.status(401).json({ error: 'Invalid token' })
 
   // Upsert user record
-  await supabase.from('users').upsert({
+  const { error: upsertErr } = await supabase.from('users').upsert({
     id: verifiedUser.id,
     display_name: verifiedUser.display_name,
     image_url: verifiedUser.image_url,
   })
+  if (upsertErr) return res.status(500).json({ error: 'db_upsert_failed', detail: upsertErr.message })
 
   if (req.method === 'GET') {
     const [{ data: wl }, { data: hs }] = await Promise.all([
