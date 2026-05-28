@@ -4,7 +4,7 @@ import { History } from './tabs/History'
 import { Recommend } from './tabs/Recommend'
 import { BGM } from './tabs/BGM'
 import type { ParsedData } from './lib/parser'
-import { handleOAuthCallback, getStoredUser, getStoredToken, logout, type SpotifyUser } from './lib/auth'
+import { handleOAuthCallback, getStoredUser, getStoredToken, logout, type AuthUser } from './lib/auth'
 
 type Tab = 'history' | 'recommend' | 'bgm'
 
@@ -13,7 +13,7 @@ interface AppContextType {
   setParsedData: (data: ParsedData | null) => void
   listeningProfile: string
   setListeningProfile: (profile: string) => void
-  user: SpotifyUser | null
+  user: AuthUser | null
   token: string | null
   onLogout: () => void
 }
@@ -52,7 +52,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('history')
   const [parsedData, setParsedData] = useState<ParsedData | null>(null)
   const [listeningProfile, setListeningProfile] = useState<string>('')
-  const [user, setUser] = useState<SpotifyUser | null>(getStoredUser)
+  const [user, setUser] = useState<AuthUser | null>(getStoredUser)
   const [token, setToken] = useState<string | null>(getStoredToken)
 
   // Handle Spotify OAuth callback
