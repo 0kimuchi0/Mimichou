@@ -126,6 +126,29 @@ export function History() {
   const [cloudLoading, setCloudLoading] = useState(false)
   const [cloudInfo, setCloudInfo] = useState<string | null>(null)
 
+  // Auto-restore from cloud on mount when logged in and no data loaded
+  useEffect(() => {
+    if (!token || parsedData) return
+    fetchCloudData(token).then(data => {
+      if (!data?.historyStats) return
+      const hs = data.historyStats
+      const restored = {
+        entries: [],
+        topArtists: (hs.topArtists ?? []) as import('../lib/parser').ArtistStats[],
+        topTracks: (hs.topTracks ?? []) as import('../lib/parser').TrackStats[],
+        hourlyStats: [],
+        dayStats: [],
+        topArtistPerYear: [],
+        nostalgicArtists: [],
+        totalEntries: hs.totalEntries,
+        dateRange: hs.dateRange,
+      }
+      setParsedData(restored)
+      setListeningProfile(buildListeningProfile(restored))
+      setLoadedInfo(`クラウドから復元: ${hs.totalEntries.toLocaleString()}件 (${hs.uploadedAt?.slice(0, 10) ?? ''})`)
+    })
+  }, [token])
+
   async function handleLoadFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
