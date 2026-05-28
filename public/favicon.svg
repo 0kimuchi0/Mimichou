@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#1a1a2e"/>
+  <!-- Red accent line at top -->
+  <rect x="4" y="4" width="24" height="2.5" rx="1.2" fill="#c0392b"/>
+  <!-- 耳 character rendered as paths -->
+  <!-- Top horizontal stroke -->
+  <rect x="9" y="9.5" width="14" height="2" rx="0.8" fill="#f5f0e8"/>
+  <!-- Left vertical stroke -->
+  <rect x="9" y="9.5" width="2" height="14" rx="0.8" fill="#f5f0e8"/>
+  <!-- Middle stroke 1 -->
+  <rect x="9" y="14" width="10" height="1.8" rx="0.7" fill="#f5f0e8"/>
+  <!-- Middle stroke 2 -->
+  <rect x="9" y="18" width="10" height="1.8" rx="0.7" fill="#f5f0e8"/>
+  <!-- Bottom horizontal stroke -->
+  <rect x="9" y="21.5" width="14" height="2" rx="0.8" fill="#f5f0e8"/>
+  <!-- Right vertical stroke -->
+  <rect x="21" y="9.5" width="2" height="14" rx="0.8" fill="#f5f0e8"/>
+</svg>

@@ -5,13 +5,7 @@ import {
 } from 'recharts'
 import { parseFiles, buildListeningProfile, formatMinutes, type ParsedData } from '../lib/parser'
 import { useAppContext } from '../App'
-import {
-  startSpotifyLogin,
-  handleOAuthCallback,
-  fetchRecentlyPlayed,
-  convertToSpotifyEntries,
-  getClientId,
-} from '../lib/spotify'
+import { saveHistoryStats, fetchCloudData } from '../lib/db'
 
 const C = {
   bg: '#1a1a2e',
@@ -47,7 +41,7 @@ const s: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase',
     marginBottom: '16px',
     margin: '0 0 16px',
-    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
+    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
   },
   table: {
     width: '100%',
@@ -84,7 +78,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '12px 24px',
     fontSize: '15px',
     cursor: 'pointer',
-    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
+    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
     letterSpacing: '0.05em',
   },
   statsRow: {
@@ -105,7 +99,7 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: '24px',
     fontWeight: '700',
     color: C.text,
-    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
+    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
   },
   statLabel: {
     fontSize: '11px',
@@ -124,33 +118,13 @@ const tooltipStyle = {
 }
 
 export function History() {
-  const { parsedData, setParsedData, setListeningProfile } = useAppContext()
+  const { parsedData, setParsedData, setListeningProfile, token } = useAppContext()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [spotifyLoading, setSpotifyLoading] = useState(false)
-  const [spotifyError, setSpotifyError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    const code = params.get('code')
-    if (!code) return
-
-    // Remove code from URL without reload
-    window.history.replaceState({}, '', '/')
-
-    setSpotifyLoading(true)
-    handleOAuthCallback(code)
-      .then(token => fetchRecentlyPlayed(token))
-      .then(items => {
-        if (items.length === 0) throw new Error('再生履歴がありません')
-        const files = convertToSpotifyEntries(items)
-        const data = parseFiles(files)
-        setParsedData(data)
-        setListeningProfile(buildListeningProfile(data))
-      })
-      .catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))
-      .finally(() => setSpotifyLoading(false))
-  }, [])
+  const [loadedInfo, setLoadedInfo] = useState<string | null>(null)
+  const [cloudSaving, setCloudSaving] = useState(false)
+  const [cloudLoading, setCloudLoading] = useState(false)
+  const [cloudInfo, setCloudInfo] = useState<string | null>(null)
 
   async function handleLoadFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -167,8 +141,25 @@ export function History() {
         }))
       )
       const data = parseFiles(fileContents)
+      if (data.totalEntries === 0) {
+        setError('対応形式のデータが見つかりませんでした。Spotify JSON、Apple Music CSV、YouTube Music JSON、Amazon Music CSVに対応しています。')
+        setLoading(false)
+        return
+      }
       setParsedData(data)
       setListeningProfile(buildListeningProfile(data))
+      setLoadedInfo(`${files.length}ファイル・${data.totalEntries.toLocaleString()}件を読み込みました`)
+
+      // Auto-save stats to cloud if logged in
+      if (token) {
+        setCloudSaving(true)
+        saveHistoryStats(token, {
+          topArtists: data.topArtists.slice(0, 20).map(a => ({ artist: a.artist, totalMinutes: a.totalMinutes, playCount: a.playCount })),
+          topTracks: data.topTracks.slice(0, 20).map(t => ({ track: t.track, artist: t.artist, totalMinutes: t.totalMinutes, playCount: t.playCount })),
+          dateRange: data.dateRange,
+          totalEntries: data.totalEntries,
+        }).finally(() => setCloudSaving(false))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -178,126 +169,85 @@ export function History() {
 
   if (!parsedData) {
     return (
-      <div style={{ ...s.root, overflowY: 'auto', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: '40px' }}>
-        <div style={{ width: '100%', maxWidth: '640px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          {/* Title */}
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ marginBottom: '12px' }}>
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(192,57,43,0.7)" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
-              </svg>
+      <div style={{ ...s.root, overflowY: 'auto' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', padding: '32px 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ fontSize: '36px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text, marginBottom: '6px', letterSpacing: '0.08em' }}>
+              耳帖
             </div>
-            <div style={{ fontSize: '22px', fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif', color: C.text, marginBottom: '6px' }}>
-              音楽履歴を読み込む
-            </div>
-            <div style={{ fontSize: '13px', color: C.textMuted }}>
-              複数サービスの再生履歴を取り込めます
+            <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+              Mimichou
             </div>
           </div>
 
-          {/* Option A: Spotify Login */}
-          {getClientId() && (
-            <div style={{
-              background: 'rgba(29,185,84,0.08)',
-              border: '1px solid rgba(29,185,84,0.3)',
-              borderRadius: '10px',
-              padding: '20px 24px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1DB954" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                <span style={{ fontSize: '15px', fontWeight: '700', color: '#1DB954' }}>方法①　Spotify でログイン（自動取得）</span>
-              </div>
-              <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.8', marginBottom: '16px' }}>
-                ボタンひとつで今すぐ使えます。ただし Spotify API の制限により、<strong style={{ color: C.text }}>直近 50〜250 曲程度</strong>（ここ数日〜数週間分）しか取得できません。<br />
-                年別グラフや「懐かしのアーティスト」など長期分析には向きませんが、推薦・BGM 機能はすぐに試せます。
-              </div>
-              <button
-                style={{
-                  background: '#1DB954',
-                  color: '#000',
-                  border: 'none',
-                  borderRadius: '6px',
-                  padding: '11px 24px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: spotifyLoading || loading ? 'not-allowed' : 'pointer',
-                  opacity: spotifyLoading || loading ? 0.6 : 1,
-                }}
-                onClick={() => startSpotifyLogin().catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))}
-                disabled={loading || spotifyLoading}
-              >
-                {spotifyLoading ? '取得中...' : '▶ Spotify でログイン'}
-              </button>
-              {spotifyError && <div style={{ color: C.accent, fontSize: '12px', marginTop: '8px' }}>{spotifyError}</div>}
+          {/* File upload card */}
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '24px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '10px' }}>
+              ファイルから読み込む
             </div>
-          )}
+            <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.7', marginBottom: '18px' }}>
+              各サービスのデータエクスポートファイルを選択してください。複数ファイルを同時に選択できます。
+            </div>
 
-          {/* Option B: File Upload */}
-          <div style={{
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: '10px',
-            padding: '20px 24px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(245,240,232,0.7)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-              <span style={{ fontSize: '15px', fontWeight: '700', color: C.text }}>
-                {getClientId() ? '方法②　ファイルを読み込む（全履歴・推奨）' : '履歴ファイルを読み込む'}
-              </span>
-            </div>
-            {/* 対応サービス badges */}
-            <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: '6px', marginBottom: '14px' }}>
-              {(['Spotify', 'Apple Music', 'YouTube Music', 'Amazon Music'] as const).map(svc => (
-                <span key={svc} style={{
-                  fontSize: '11px',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  border: `1px solid ${C.border}`,
-                  color: C.textMuted,
-                  background: 'rgba(192,57,43,0.08)',
-                  letterSpacing: '0.04em',
-                }}>{svc}</span>
+            <div style={{ marginBottom: '20px' }}>
+              {[
+                { name: 'Spotify', how: 'アカウント設定 → プライバシー → データのダウンロード', file: 'Streaming_History_*.json' },
+                { name: 'Apple Music', how: 'privacy.apple.com → データを取得 → Apple Music', file: 'Play Activity.csv' },
+                { name: 'YouTube Music', how: 'Google Takeout → YouTube と YouTube Music', file: 'watch-history.json' },
+                { name: 'Amazon Music', how: 'Amazonカスタマーサービスにリクエスト', file: 'AmazonMusic*.csv' },
+              ].map(s2 => (
+                <div key={s2.name} style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, marginTop: '7px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>{s2.name}</div>
+                    <div style={{ fontSize: '11px', color: C.textDim, marginTop: '2px' }}>{s2.how}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(192,57,43,0.7)', marginTop: '2px', fontFamily: 'monospace' }}>{s2.file}</div>
+                  </div>
+                </div>
               ))}
             </div>
-            <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.8', marginBottom: '16px' }}>
-              各サービスから<strong style={{ color: C.text }}>数年分の全再生履歴</strong>を取り込めます。分析精度が高く、すべての機能をフル活用できます。<br />
-              事前にデータを入手する必要があります（申請から受け取りまで数日かかる場合があります）。
-              <br /><br />
-              <strong style={{ color: C.text }}>対応サービス：</strong><br />
-              <strong>Spotify</strong>: プライバシーセンター → 拡張ストリーミング履歴
-              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Streaming_History_Audio_*.json</code>)<br />
-              <strong>Apple Music</strong>: appleid.apple.com → データとプライバシー
-              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>Apple Music Play Activity.csv</code>)<br />
-              <strong>YouTube Music</strong>: Google Takeout → YouTube Music
-              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>watch-history.json</code>)<br />
-              <strong>Amazon Music</strong>: カスタマーサービスへリクエスト
-              {' '}(<code style={{ background: 'rgba(255,255,255,0.1)', padding: '1px 5px', borderRadius: '3px' }}>AmazonMusic*.csv</code>)
-            </div>
-            <label style={{
-              display: 'inline-block',
-              background: C.accent,
-              color: C.text,
-              border: 'none',
-              borderRadius: '6px',
-              padding: '11px 24px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: loading || spotifyLoading ? 'not-allowed' : 'pointer',
-              opacity: loading || spotifyLoading ? 0.6 : 1,
-              fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
-            }}>
-              {loading ? '読み込み中...' : 'ファイルを選択'}
+
+            <label style={{ ...s.loadBtn, display: 'block', textAlign: 'center', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+              {loading ? '読み込み中...' : 'ファイルを選択する'}
               <input
                 type="file"
                 multiple
                 accept=".json,.csv"
                 style={{ display: 'none' }}
                 onChange={handleLoadFiles}
-                disabled={loading || spotifyLoading}
+                disabled={loading}
               />
             </label>
-            {error && <div style={{ color: C.accent, fontSize: '12px', marginTop: '8px' }}>{error}</div>}
+            {error && <div style={{ color: C.accent, fontSize: '13px', marginTop: '10px' }}>{error}</div>}
           </div>
+
+          {/* Cloud restore (logged-in users only) */}
+          {token && (
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>クラウドから復元</div>
+                <div style={{ fontSize: '11px', color: C.textDim, marginTop: '3px' }}>前回アップロードした統計データを読み込む</div>
+              </div>
+              <button
+                style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '12px', display: 'inline-block', cursor: cloudLoading ? 'not-allowed' : 'pointer', opacity: cloudLoading ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                disabled={cloudLoading}
+                onClick={async () => {
+                  setCloudLoading(true)
+                  setError(null)
+                  const data = await fetchCloudData(token)
+                  setCloudLoading(false)
+                  if (!data?.historyStats) {
+                    setError('クラウドにデータが見つかりませんでした。先にファイルをアップロードしてください。')
+                    return
+                  }
+                  setCloudInfo(`クラウドから復元: ${data.historyStats.totalEntries.toLocaleString()}件 (${data.historyStats.uploadedAt?.slice(0, 10) ?? ''})`)
+                }}
+              >
+                {cloudLoading ? '読み込み中...' : '復元する'}
+              </button>
+            </div>
+          )}
+          {cloudInfo && <div style={{ fontSize: '11px', color: C.textMuted, marginTop: '10px', textAlign: 'center' }}>{cloudInfo}</div>}
         </div>
       </div>
     )
@@ -326,42 +276,28 @@ export function History() {
     <div style={s.root}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif', fontSize: '22px' }}>
-          音楽履歴レポート
-        </h2>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          {getClientId() && (
-            <button
-              style={{
-                ...s.loadBtn,
-                padding: '8px 16px',
-                fontSize: '13px',
-                background: '#1DB954',
-                color: '#000',
-                fontWeight: '700',
-              }}
-              onClick={() => startSpotifyLogin().catch(e => setSpotifyError(e instanceof Error ? e.message : String(e)))}
-              disabled={spotifyLoading}
-            >
-              {spotifyLoading ? '取得中...' : 'Spotify 再取得'}
-            </button>
+        <div>
+          <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
+            音楽履歴レポート
+          </h2>
+          {loadedInfo && (
+            <div style={{ fontSize: '11px', color: C.textDim, marginTop: '4px' }}>
+              {loadedInfo}
+              {cloudSaving && <span style={{ marginLeft: '8px', color: 'rgba(192,57,43,0.6)' }}>☁ 保存中...</span>}
+            </div>
           )}
-          <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block' }}>
-            再読み込み
-            <input
-              type="file"
-              multiple
-              accept=".json,.csv"
-              style={{ display: 'none' }}
-              onChange={handleLoadFiles}
-            />
-          </label>
         </div>
+        <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block', cursor: 'pointer' }}>
+          再読み込み
+          <input
+            type="file"
+            multiple
+            accept=".json,.csv"
+            style={{ display: 'none' }}
+            onChange={handleLoadFiles}
+          />
+        </label>
       </div>
-
-      {spotifyError && (
-        <div style={{ color: '#1DB954', fontSize: '13px', marginBottom: '12px' }}>{spotifyError}</div>
-      )}
 
       {/* Stats summary */}
       <div style={s.statsRow}>

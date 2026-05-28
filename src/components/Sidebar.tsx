@@ -1,4 +1,5 @@
 import React from 'react'
+import { startSpotifyLogin, type SpotifyUser } from '../lib/auth'
 
 type Tab = 'history' | 'recommend' | 'bgm'
 
@@ -6,6 +7,8 @@ interface SidebarProps {
   activeTab: Tab
   onTabChange: (tab: Tab) => void
   hasData: boolean
+  user: SpotifyUser | null
+  onLogout: () => void
 }
 
 const IconHistory = () => (
@@ -29,6 +32,12 @@ const IconBGM = () => (
     <path d="M9 18V5l12-2v13"/>
     <circle cx="6" cy="18" r="3"/>
     <circle cx="18" cy="16" r="3"/>
+  </svg>
+)
+
+const SpotifyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
   </svg>
 )
 
@@ -121,18 +130,71 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: '0 2px 2px 0'
   },
   footer: {
-    padding: '16px',
+    padding: '12px',
     borderTop: '1px solid rgba(192, 57, 43, 0.2)',
-    textAlign: 'center'
   },
   footerText: {
     fontSize: '10px',
     color: 'rgba(245, 240, 232, 0.25)',
-    letterSpacing: '0.1em'
+    letterSpacing: '0.1em',
+    textAlign: 'center',
+    marginBottom: '10px'
+  },
+  loginBtn: {
+    width: '100%',
+    background: '#1DB954',
+    color: '#000',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '8px 10px',
+    fontSize: '12px',
+    fontWeight: '700',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '6px',
+  },
+  userCard: {
+    background: 'rgba(245,240,232,0.06)',
+    borderRadius: '8px',
+    padding: '8px 10px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+  },
+  userAvatar: {
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    background: 'rgba(192,57,43,0.4)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    overflow: 'hidden',
+  },
+  userName: {
+    fontSize: '12px',
+    color: '#f5f0e8',
+    fontWeight: '600',
+    flex: 1,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap'
+  },
+  logoutBtn: {
+    background: 'none',
+    border: 'none',
+    color: 'rgba(245,240,232,0.3)',
+    cursor: 'pointer',
+    fontSize: '16px',
+    padding: '0',
+    lineHeight: 1,
   }
 }
 
-export function Sidebar({ activeTab, onTabChange, hasData }: SidebarProps) {
+export function Sidebar({ activeTab, onTabChange, hasData, user, onLogout }: SidebarProps) {
   return (
     <aside style={styles.sidebar}>
       <div style={styles.header}>
@@ -163,20 +225,10 @@ export function Sidebar({ activeTab, onTabChange, hasData }: SidebarProps) {
               {isActive && <div style={styles.activeIndicator} />}
               <span style={{ ...styles.tabIcon, color: isActive ? '#f5f0e8' : 'rgba(245,240,232,0.5)' }}><tab.Icon /></span>
               <span style={styles.tabText}>
-                <span
-                  style={{
-                    ...styles.tabLabel,
-                    color: isActive ? '#f5f0e8' : 'rgba(245, 240, 232, 0.6)'
-                  }}
-                >
+                <span style={{ ...styles.tabLabel, color: isActive ? '#f5f0e8' : 'rgba(245, 240, 232, 0.6)' }}>
                   {tab.label}
                 </span>
-                <span
-                  style={{
-                    ...styles.tabSublabel,
-                    color: isActive ? 'rgba(192, 57, 43, 0.8)' : 'rgba(245, 240, 232, 0.3)'
-                  }}
-                >
+                <span style={{ ...styles.tabSublabel, color: isActive ? 'rgba(192, 57, 43, 0.8)' : 'rgba(245, 240, 232, 0.3)' }}>
                   {tab.sublabel}
                 </span>
               </span>
@@ -187,6 +239,27 @@ export function Sidebar({ activeTab, onTabChange, hasData }: SidebarProps) {
 
       <div style={styles.footer}>
         <p style={styles.footerText}>Spotify × Claude</p>
+
+        {user ? (
+          <div style={styles.userCard}>
+            <div style={styles.userAvatar}>
+              {user.image_url ? (
+                <img src={user.image_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <span style={{ fontSize: '12px', color: '#f5f0e8', fontWeight: '700' }}>
+                  {user.display_name[0]?.toUpperCase()}
+                </span>
+              )}
+            </div>
+            <span style={styles.userName}>{user.display_name}</span>
+            <button style={styles.logoutBtn} onClick={onLogout} title="ログアウト">×</button>
+          </div>
+        ) : (
+          <button style={styles.loginBtn} onClick={startSpotifyLogin}>
+            <SpotifyIcon />
+            Spotifyでログイン
+          </button>
+        )}
       </div>
     </aside>
   )

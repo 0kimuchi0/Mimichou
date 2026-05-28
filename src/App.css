@@ -13,8 +13,7 @@ html, body, #root {
 body {
   background-color: #1a1a2e;
   color: #f5f0e8;
-  font-family: "Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif;
-  font-feature-settings: "jp04" 1;
+  font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", "Meiryo", -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 

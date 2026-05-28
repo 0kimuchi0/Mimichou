@@ -12,8 +12,10 @@ const C = {
   textDim: 'rgba(245,240,232,0.3)',
 }
 
-type MoodPreset = '集中したい' | 'リラックス' | 'テンション上げたい' | '眠れない'
-const MOOD_PRESETS: MoodPreset[] = ['集中したい', 'リラックス', 'テンション上げたい', '眠れない']
+const MOOD_PRESETS = [
+  '集中したい', 'リラックス', 'テンション上げたい', '眠れない',
+  '感傷的な気分', '朝のスタート', '落ち込んでいる', 'ドライブ中',
+]
 
 function getCurrentTimeLabel(): string {
   const h = new Date().getHours()
@@ -122,7 +124,7 @@ const s: Record<string, React.CSSProperties> = {
     padding: '14px',
     fontSize: '16px',
     cursor: 'pointer',
-    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
+    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
     letterSpacing: '0.08em',
     marginTop: '4px',
   },
@@ -179,8 +181,8 @@ export function BGM() {
   const [result, setResult] = useState<Suggestion | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  function selectPreset(preset: MoodPreset) {
-    setMood(preset)
+  function selectPreset(preset: string) {
+    setMood(mood === preset ? '' : preset)
   }
 
   async function generate() {
@@ -224,7 +226,7 @@ export function BGM() {
 
   return (
     <div style={s.root}>
-      <h2 style={{ margin: '0 0 20px', fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif', fontSize: '22px' }}>
+      <h2 style={{ margin: '0 0 20px', fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
         BGM セレクター
       </h2>
 

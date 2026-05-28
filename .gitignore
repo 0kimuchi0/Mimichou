@@ -3,5 +3,5 @@ out/
 dist/
 .env
 *.tsbuildinfo
-.vercel
 .claude/
+.vercel/

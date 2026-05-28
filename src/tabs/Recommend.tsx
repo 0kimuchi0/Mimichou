@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { claudeChatStream, RECOMMEND_SYSTEM_PROMPT, type Message } from '../lib/claude'
 import { useAppContext } from '../App'
+import { saveWishlist, fetchCloudData, type WishlistItem } from '../lib/db'
 
 const C = {
   bg: '#1a1a2e',
@@ -14,11 +15,7 @@ const C = {
   textDim: 'rgba(245,240,232,0.3)',
 }
 
-interface SavedAlbum {
-  id: string
-  text: string
-  savedAt: string
-}
+type SavedAlbum = WishlistItem
 
 const s: Record<string, React.CSSProperties> = {
   root: {
@@ -39,7 +36,7 @@ const s: Record<string, React.CSSProperties> = {
   title: {
     margin: 0,
     fontSize: '20px',
-    fontFamily: '"Hiragino Mincho ProN", "YuMincho", "Yu Mincho", Georgia, serif',
+    fontFamily: '"Hiragino Mincho ProN", "Yu Mincho", serif',
   },
   body: {
     flex: 1,
@@ -148,18 +145,52 @@ const s: Record<string, React.CSSProperties> = {
   },
 }
 
+const WISHLIST_KEY = 'mimichou_wishlist'
+
+function loadWishlist(): SavedAlbum[] {
+  try {
+    const stored = localStorage.getItem(WISHLIST_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
 export function Recommend() {
-  const { listeningProfile } = useAppContext()
+  const { listeningProfile, token } = useAppContext()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
-  const [wishlist, setWishlist] = useState<SavedAlbum[]>([])
-  const [selectedText, setSelectedText] = useState('')
+  const [wishlist, setWishlist] = useState<SavedAlbum[]>(loadWishlist)
+  const [cloudSynced, setCloudSynced] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  // Persist to localStorage
+  useEffect(() => {
+    try { localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist)) } catch {}
+  }, [wishlist])
+
+  // Load from cloud when token becomes available
+  useEffect(() => {
+    if (!token || cloudSynced) return
+    fetchCloudData(token).then(data => {
+      if (data?.wishlist?.length) {
+        setWishlist(data.wishlist)
+      }
+      setCloudSynced(true)
+    })
+  }, [token, cloudSynced])
+
+  // Sync to cloud when wishlist changes (debounced)
+  useEffect(() => {
+    if (!token || !cloudSynced) return
+    const timer = setTimeout(() => saveWishlist(token, wishlist), 1500)
+    return () => clearTimeout(timer)
+  }, [wishlist, token, cloudSynced])
 
   // Initial greeting
   useEffect(() => {
@@ -285,7 +316,18 @@ export function Recommend() {
               </div>
             ))}
             {streaming && messages[messages.length - 1]?.content === '' && (
-              <div style={{ color: C.textDim, fontSize: '13px' }}>考え中...</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.textDim, fontSize: '13px' }}>
+                <span style={{ display: 'inline-flex', gap: '3px' }}>
+                  {[0,1,2].map(i => (
+                    <span key={i} style={{
+                      width: '5px', height: '5px', borderRadius: '50%',
+                      background: C.accent, opacity: 0.6,
+                      animation: `pulse 1s ease-in-out ${i * 0.2}s infinite alternate`
+                    }} />
+                  ))}
+                </span>
+                考え中...
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
@@ -315,7 +357,14 @@ export function Recommend() {
 
         {/* Wishlist sidebar */}
         <div style={s.wishlistPane}>
-          <div style={s.wishlistHeader}>気になる</div>
+          <div style={{ ...s.wishlistHeader, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>気になる</span>
+            {token && (
+              <span style={{ fontSize: '9px', color: 'rgba(245,240,232,0.35)', letterSpacing: '0.05em', textTransform: 'none', fontWeight: '400' }}>
+                ☁ 同期中
+              </span>
+            )}
+          </div>
           <div style={s.wishlistItems}>
             {wishlist.length === 0 && (
               <div style={{ color: C.textDim, fontSize: '12px', textAlign: 'center', marginTop: '16px' }}>

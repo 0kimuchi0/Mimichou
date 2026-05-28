@@ -1,26 +1,15 @@
+const API_BASE = 'https://mimichou.vercel.app'
+
 export interface Message {
   role: 'user' | 'assistant'
   content: string
-}
-
-export async function claudeChat(
-  messages: Message[],
-  systemPrompt: string
-): Promise<string> {
-  const res = await fetch('/api/claude', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ messages, systemPrompt, stream: false }),
-  })
-  const data = await res.json()
-  return data.content
 }
 
 export async function* claudeChatStream(
   messages: Message[],
   systemPrompt: string
 ): AsyncGenerator<string> {
-  const res = await fetch('/api/claude', {
+  const res = await fetch(`${API_BASE}/api/claude`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ messages, systemPrompt, stream: true }),
