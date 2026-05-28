@@ -1,11 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
-
 interface VerifiedUser {
   id: string
   display_name: string
@@ -45,76 +40,87 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'OPTIONS') return res.status(200).end()
 
-  const auth = req.headers.authorization
-  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' })
-
-  const prefixedToken = auth.slice(7)
-  const colonIdx = prefixedToken.indexOf(':')
-  if (colonIdx === -1) return res.status(401).json({ error: 'Invalid token format' })
-
-  const provider = prefixedToken.slice(0, colonIdx)
-  const accessToken = prefixedToken.slice(colonIdx + 1)
-
-  let verifiedUser: VerifiedUser | null = null
-  if (provider === 'spotify') {
-    verifiedUser = await verifySpotifyToken(accessToken)
-  } else if (provider === 'google') {
-    verifiedUser = await verifyGoogleToken(accessToken)
+  const supabaseUrl = process.env.SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!supabaseUrl || !supabaseKey) {
+    return res.status(500).json({ error: 'missing_env', detail: 'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set' })
   }
 
-  if (!verifiedUser) return res.status(401).json({ error: 'Invalid token' })
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Upsert user record
-  const { error: upsertErr } = await supabase.from('users').upsert({
-    id: verifiedUser.id,
-    display_name: verifiedUser.display_name,
-    image_url: verifiedUser.image_url,
-  })
-  if (upsertErr) return res.status(500).json({ error: 'db_upsert_failed', detail: upsertErr.message })
+    const auth = req.headers.authorization
+    if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' })
 
-  if (req.method === 'GET') {
-    const [{ data: wl }, { data: hs }] = await Promise.all([
-      supabase.from('wishlists').select('items').eq('user_id', verifiedUser.id).maybeSingle(),
-      supabase.from('history_snapshots').select('*').eq('user_id', verifiedUser.id).maybeSingle(),
-    ])
+    const prefixedToken = auth.slice(7)
+    const colonIdx = prefixedToken.indexOf(':')
+    if (colonIdx === -1) return res.status(401).json({ error: 'Invalid token format' })
 
-    return res.status(200).json({
-      wishlist: wl?.items ?? [],
-      historyStats: hs
-        ? {
-            topArtists: hs.top_artists,
-            topTracks: hs.top_tracks,
-            dateRange: hs.date_range,
-            totalEntries: hs.total_entries,
-            uploadedAt: hs.uploaded_at,
-          }
-        : null,
+    const provider = prefixedToken.slice(0, colonIdx)
+    const accessToken = prefixedToken.slice(colonIdx + 1)
+
+    let verifiedUser: VerifiedUser | null = null
+    if (provider === 'spotify') {
+      verifiedUser = await verifySpotifyToken(accessToken)
+    } else if (provider === 'google') {
+      verifiedUser = await verifyGoogleToken(accessToken)
+    }
+
+    if (!verifiedUser) return res.status(401).json({ error: 'Invalid token' })
+
+    const { error: upsertErr } = await supabase.from('users').upsert({
+      id: verifiedUser.id,
+      display_name: verifiedUser.display_name,
+      image_url: verifiedUser.image_url,
     })
-  }
+    if (upsertErr) return res.status(500).json({ error: 'db_upsert_failed', detail: upsertErr.message })
 
-  if (req.method === 'POST') {
-    const { type, data } = req.body as { type: string; data: unknown }
+    if (req.method === 'GET') {
+      const [{ data: wl }, { data: hs }] = await Promise.all([
+        supabase.from('wishlists').select('items').eq('user_id', verifiedUser.id).maybeSingle(),
+        supabase.from('history_snapshots').select('*').eq('user_id', verifiedUser.id).maybeSingle(),
+      ])
 
-    if (type === 'wishlist') {
-      await supabase.from('wishlists').upsert({
-        user_id: verifiedUser.id,
-        items: data,
-        updated_at: new Date().toISOString(),
-      })
-    } else if (type === 'history') {
-      const d = data as Record<string, unknown>
-      await supabase.from('history_snapshots').upsert({
-        user_id: verifiedUser.id,
-        top_artists: d.topArtists,
-        top_tracks: d.topTracks,
-        date_range: d.dateRange,
-        total_entries: d.totalEntries,
-        uploaded_at: new Date().toISOString(),
+      return res.status(200).json({
+        wishlist: wl?.items ?? [],
+        historyStats: hs
+          ? {
+              topArtists: hs.top_artists,
+              topTracks: hs.top_tracks,
+              dateRange: hs.date_range,
+              totalEntries: hs.total_entries,
+              uploadedAt: hs.uploaded_at,
+            }
+          : null,
       })
     }
 
-    return res.status(200).json({ ok: true })
-  }
+    if (req.method === 'POST') {
+      const { type, data } = req.body as { type: string; data: unknown }
 
-  return res.status(405).json({ error: 'Method not allowed' })
+      if (type === 'wishlist') {
+        await supabase.from('wishlists').upsert({
+          user_id: verifiedUser.id,
+          items: data,
+          updated_at: new Date().toISOString(),
+        })
+      } else if (type === 'history') {
+        const d = data as Record<string, unknown>
+        await supabase.from('history_snapshots').upsert({
+          user_id: verifiedUser.id,
+          top_artists: d.topArtists,
+          top_tracks: d.topTracks,
+          date_range: d.dateRange,
+          total_entries: d.totalEntries,
+          uploaded_at: new Date().toISOString(),
+        })
+      }
+
+      return res.status(200).json({ ok: true })
+    }
+
+    return res.status(405).json({ error: 'Method not allowed' })
+  } catch (e) {
+    return res.status(500).json({ error: 'internal', detail: e instanceof Error ? e.message : String(e) })
+  }
 }
