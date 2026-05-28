@@ -47,7 +47,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      },
+    })
 
     const auth = req.headers.authorization
     if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' })
