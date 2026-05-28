@@ -88,7 +88,7 @@ function HourChart({ data }: { data: ParsedData['hourlyStats'] }) {
 }
 
 function DataView({ data }: { data: ParsedData }) {
-  const [tab, setTab] = useState<'artists' | 'tracks' | 'time'>('artists')
+  const [tab, setTab] = useState<'artists' | 'tracks' | 'time' | 'years'>('artists')
   const maxArtistMs = data.topArtists[0]?.totalMs || 1
   const maxTrackMs = data.topTracks[0]?.totalMs || 1
 
@@ -112,14 +112,14 @@ function DataView({ data }: { data: ParsedData }) {
 
       {/* Tab switcher */}
       <View style={styles.tabRow}>
-        {(['artists', 'tracks', 'time'] as const).map(t => (
+        {(['artists', 'tracks', 'time', 'years'] as const).map(t => (
           <TouchableOpacity
             key={t}
             style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             onPress={() => setTab(t)}
           >
             <Text style={[styles.tabBtnText, tab === t && styles.tabBtnTextActive]}>
-              {t === 'artists' ? 'アーティスト' : t === 'tracks' ? '曲' : '時間帯'}
+              {t === 'artists' ? 'アーティスト' : t === 'tracks' ? '曲' : t === 'time' ? '時間帯' : '年別'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -156,6 +156,36 @@ function DataView({ data }: { data: ParsedData }) {
             ))}
           </View>
         </View>
+      )}
+
+      {tab === 'years' && (
+        <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>年別トップアーティスト</Text>
+            {data.topArtistPerYear.map(row => (
+              <View key={row.year} style={styles.yearRow}>
+                <Text style={styles.yearNum}>{row.year}</Text>
+                <Text style={styles.yearArtist} numberOfLines={1}>{row.artist}</Text>
+                <Text style={styles.yearStat}>{row.totalMinutes}分</Text>
+              </View>
+            ))}
+          </View>
+
+          {data.nostalgicArtists.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>懐かしのアーティスト</Text>
+              <Text style={styles.sectionHint}>2023年以前によく聴いて、最近は未再生</Text>
+              {data.nostalgicArtists.slice(0, 10).map(a => (
+                <View key={a.artist} style={styles.rankRow}>
+                  <View style={styles.rankContent}>
+                    <Text style={styles.rankName} numberOfLines={1}>{a.artist}</Text>
+                    <Text style={styles.rankSub}>最後：{a.lastYear}年 · {a.preMinutes}分</Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+        </>
       )}
     </View>
   )
@@ -563,6 +593,34 @@ const styles = StyleSheet.create({
   },
   dayCount: {
     fontSize: 11,
+    color: C.textDim,
+  },
+  sectionHint: {
+    fontSize: 11,
+    color: C.textDim,
+    marginBottom: 10,
+  },
+  yearRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(192,57,43,0.1)',
+    gap: 10,
+  },
+  yearNum: {
+    width: 40,
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.accent,
+  },
+  yearArtist: {
+    flex: 1,
+    fontSize: 14,
+    color: C.text,
+  },
+  yearStat: {
+    fontSize: 12,
     color: C.textDim,
   },
 })

@@ -120,6 +120,7 @@ export function History() {
   const { parsedData, setParsedData, setListeningProfile } = useAppContext()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [loadedInfo, setLoadedInfo] = useState<string | null>(null)
 
   async function handleLoadFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -136,8 +137,14 @@ export function History() {
         }))
       )
       const data = parseFiles(fileContents)
+      if (data.totalEntries === 0) {
+        setError('対応形式のデータが見つかりませんでした。Spotify JSON、Apple Music CSV、YouTube Music JSON、Amazon Music CSVに対応しています。')
+        setLoading(false)
+        return
+      }
       setParsedData(data)
       setListeningProfile(buildListeningProfile(data))
+      setLoadedInfo(`${files.length}ファイル・${data.totalEntries.toLocaleString()}件を読み込みました`)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -147,27 +154,57 @@ export function History() {
 
   if (!parsedData) {
     return (
-      <div style={{ ...s.root, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={s.emptyState}>
-          <div style={{ fontSize: '48px' }}>🎵</div>
-          <div style={{ fontSize: '20px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text }}>
-            音楽履歴を読み込む
+      <div style={{ ...s.root, overflowY: 'auto' }}>
+        <div style={{ maxWidth: '560px', margin: '0 auto', padding: '32px 24px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+            <div style={{ fontSize: '36px', fontFamily: '"Hiragino Mincho ProN", serif', color: C.text, marginBottom: '6px', letterSpacing: '0.08em' }}>
+              耳帖
+            </div>
+            <div style={{ fontSize: '12px', color: C.textDim, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+              Mimichou
+            </div>
           </div>
-          <div style={{ fontSize: '13px', color: C.textMuted, textAlign: 'center', maxWidth: '320px' }}>
-            Spotifyからエクスポートした<br />Streaming_History_Audio_*.json を選択してください
+
+          {/* File upload card */}
+          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '24px', marginBottom: '16px' }}>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: C.text, marginBottom: '10px' }}>
+              ファイルから読み込む
+            </div>
+            <div style={{ fontSize: '13px', color: C.textMuted, lineHeight: '1.7', marginBottom: '18px' }}>
+              各サービスのデータエクスポートファイルを選択してください。複数ファイルを同時に選択できます。
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              {[
+                { name: 'Spotify', how: 'アカウント設定 → プライバシー → データのダウンロード', file: 'Streaming_History_*.json' },
+                { name: 'Apple Music', how: 'privacy.apple.com → データを取得 → Apple Music', file: 'Play Activity.csv' },
+                { name: 'YouTube Music', how: 'Google Takeout → YouTube と YouTube Music', file: 'watch-history.json' },
+                { name: 'Amazon Music', how: 'Amazonカスタマーサービスにリクエスト', file: 'AmazonMusic*.csv' },
+              ].map(s2 => (
+                <div key={s2.name} style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: C.accent, marginTop: '7px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>{s2.name}</div>
+                    <div style={{ fontSize: '11px', color: C.textDim, marginTop: '2px' }}>{s2.how}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(192,57,43,0.7)', marginTop: '2px', fontFamily: 'monospace' }}>{s2.file}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <label style={{ ...s.loadBtn, display: 'block', textAlign: 'center', cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}>
+              {loading ? '読み込み中...' : 'ファイルを選択する'}
+              <input
+                type="file"
+                multiple
+                accept=".json,.csv"
+                style={{ display: 'none' }}
+                onChange={handleLoadFiles}
+                disabled={loading}
+              />
+            </label>
+            {error && <div style={{ color: C.accent, fontSize: '13px', marginTop: '10px' }}>{error}</div>}
           </div>
-          <label style={{ ...s.loadBtn, display: 'inline-block' }}>
-            {loading ? '読み込み中...' : 'ファイルを選択'}
-            <input
-              type="file"
-              multiple
-              accept=".json"
-              style={{ display: 'none' }}
-              onChange={handleLoadFiles}
-              disabled={loading}
-            />
-          </label>
-          {error && <div style={{ color: C.accent, fontSize: '13px' }}>{error}</div>}
         </div>
       </div>
     )
@@ -196,15 +233,20 @@ export function History() {
     <div style={s.root}>
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
-          音楽履歴レポート
-        </h2>
-        <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block' }}>
+        <div>
+          <h2 style={{ margin: 0, fontFamily: '"Hiragino Mincho ProN", serif', fontSize: '22px' }}>
+            音楽履歴レポート
+          </h2>
+          {loadedInfo && (
+            <div style={{ fontSize: '11px', color: C.textDim, marginTop: '4px' }}>{loadedInfo}</div>
+          )}
+        </div>
+        <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block', cursor: 'pointer' }}>
           再読み込み
           <input
             type="file"
             multiple
-            accept=".json"
+            accept=".json,.csv"
             style={{ display: 'none' }}
             onChange={handleLoadFiles}
           />

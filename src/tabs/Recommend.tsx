@@ -148,18 +148,32 @@ const s: Record<string, React.CSSProperties> = {
   },
 }
 
+const WISHLIST_KEY = 'mimichou_wishlist'
+
+function loadWishlist(): SavedAlbum[] {
+  try {
+    const stored = localStorage.getItem(WISHLIST_KEY)
+    return stored ? JSON.parse(stored) : []
+  } catch {
+    return []
+  }
+}
+
 export function Recommend() {
   const { listeningProfile } = useAppContext()
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
-  const [wishlist, setWishlist] = useState<SavedAlbum[]>([])
-  const [selectedText, setSelectedText] = useState('')
+  const [wishlist, setWishlist] = useState<SavedAlbum[]>(loadWishlist)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
+
+  useEffect(() => {
+    try { localStorage.setItem(WISHLIST_KEY, JSON.stringify(wishlist)) } catch {}
+  }, [wishlist])
 
   // Initial greeting
   useEffect(() => {
@@ -285,7 +299,18 @@ export function Recommend() {
               </div>
             ))}
             {streaming && messages[messages.length - 1]?.content === '' && (
-              <div style={{ color: C.textDim, fontSize: '13px' }}>考え中...</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: C.textDim, fontSize: '13px' }}>
+                <span style={{ display: 'inline-flex', gap: '3px' }}>
+                  {[0,1,2].map(i => (
+                    <span key={i} style={{
+                      width: '5px', height: '5px', borderRadius: '50%',
+                      background: C.accent, opacity: 0.6,
+                      animation: `pulse 1s ease-in-out ${i * 0.2}s infinite alternate`
+                    }} />
+                  ))}
+                </span>
+                考え中...
+              </div>
             )}
             <div ref={messagesEndRef} />
           </div>
