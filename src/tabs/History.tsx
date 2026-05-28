@@ -240,7 +240,21 @@ export function History() {
                     setError('クラウドにデータが見つかりませんでした。先にファイルをアップロードしてください。')
                     return
                   }
-                  setCloudInfo(`クラウドから復元: ${data.historyStats.totalEntries.toLocaleString()}件 (${data.historyStats.uploadedAt?.slice(0, 10) ?? ''})`)
+                  const hs = data.historyStats
+                  const restored = {
+                    entries: [],
+                    topArtists: (hs.topArtists ?? []) as import('../lib/parser').ArtistStats[],
+                    topTracks: (hs.topTracks ?? []) as import('../lib/parser').TrackStats[],
+                    hourlyStats: [],
+                    dayStats: [],
+                    topArtistPerYear: [],
+                    nostalgicArtists: [],
+                    totalEntries: hs.totalEntries,
+                    dateRange: hs.dateRange,
+                  }
+                  setParsedData(restored)
+                  setListeningProfile(buildListeningProfile(restored))
+                  setLoadedInfo(`クラウドから復元: ${hs.totalEntries.toLocaleString()}件 (${hs.uploadedAt?.slice(0, 10) ?? ''})`)
                 }}
               >
                 {cloudLoading ? '読み込み中...' : '復元する'}
