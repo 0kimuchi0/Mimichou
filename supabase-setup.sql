@@ -22,3 +22,12 @@ create table if not exists history_snapshots (
   total_entries integer not null default 0,
   uploaded_at timestamptz default now()
 );
+
+-- RLS を有効化（直接クライアントアクセスをブロック）
+-- サーバー側は service_role キーを使うため RLS をバイパスできる
+alter table users enable row level security;
+alter table wishlists enable row level security;
+alter table history_snapshots enable row level security;
+
+-- anon / authenticated ロールからのアクセスは一切許可しない
+-- （ポリシーを設定しないことで全拒否になる）
