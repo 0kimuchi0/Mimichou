@@ -1,19 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
   <!-- Background -->
   <rect width="32" height="32" rx="7" fill="#1a1a2e"/>
-  <!-- Red accent line at top -->
-  <rect x="4" y="4" width="24" height="2.5" rx="1.2" fill="#c0392b"/>
-  <!-- 耳 character rendered as paths -->
-  <!-- Top horizontal stroke -->
-  <rect x="9" y="9.5" width="14" height="2" rx="0.8" fill="#f5f0e8"/>
-  <!-- Left vertical stroke -->
-  <rect x="9" y="9.5" width="2" height="14" rx="0.8" fill="#f5f0e8"/>
-  <!-- Middle stroke 1 -->
-  <rect x="9" y="14" width="10" height="1.8" rx="0.7" fill="#f5f0e8"/>
-  <!-- Middle stroke 2 -->
-  <rect x="9" y="18" width="10" height="1.8" rx="0.7" fill="#f5f0e8"/>
-  <!-- Bottom horizontal stroke -->
-  <rect x="9" y="21.5" width="14" height="2" rx="0.8" fill="#f5f0e8"/>
-  <!-- Right vertical stroke -->
-  <rect x="21" y="9.5" width="2" height="14" rx="0.8" fill="#f5f0e8"/>
+
+  <!-- Notebook shadow -->
+  <rect x="7" y="5" width="20" height="24" rx="2.5" fill="#0a0a1a"/>
+
+  <!-- Notebook body (page area) -->
+  <rect x="6" y="4" width="20" height="24" rx="2.5" fill="#1c2140"/>
+
+  <!-- Red spine -->
+  <rect x="6" y="4" width="5.5" height="24" rx="2.5" fill="#c0392b"/>
+  <!-- Flatten the right side of the spine -->
+  <rect x="9.5" y="4" width="2" height="24" fill="#c0392b"/>
+
+  <!-- Binding rings on spine -->
+  <circle cx="8.5" cy="9.5" r="1.4" fill="none" stroke="#8b2020" stroke-width="1.2"/>
+  <circle cx="8.5" cy="16" r="1.4" fill="none" stroke="#8b2020" stroke-width="1.2"/>
+  <circle cx="8.5" cy="22.5" r="1.4" fill="none" stroke="#8b2020" stroke-width="1.2"/>
+
+  <!-- Subtle page lines -->
+  <line x1="13" y1="9" x2="24" y2="9" stroke="rgba(245,240,232,0.12)" stroke-width="0.8"/>
+  <line x1="13" y1="23" x2="24" y2="23" stroke="rgba(245,240,232,0.12)" stroke-width="0.8"/>
+
+  <!-- Waveform bars (music motif), centered vertically at y=16 -->
+  <rect x="13"   y="14"  width="2" height="4"  rx="1" fill="rgba(245,240,232,0.55)"/>
+  <rect x="16.5" y="10"  width="2" height="12" rx="1" fill="#f5f0e8"/>
+  <rect x="20"   y="12"  width="2" height="8"  rx="1" fill="rgba(245,240,232,0.85)"/>
+  <rect x="23.5" y="14"  width="2" height="4"  rx="1" fill="rgba(245,240,232,0.55)"/>
 </svg>
