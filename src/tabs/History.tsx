@@ -1,10 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line
 } from 'recharts'
 import { parseFiles, buildListeningProfile, formatMinutes, type ParsedData } from '../lib/parser'
 import { useAppContext } from '../App'
+import { saveHistoryStats, fetchCloudData } from '../lib/db'
 
 const C = {
   bg: '#1a1a2e',
@@ -117,10 +118,13 @@ const tooltipStyle = {
 }
 
 export function History() {
-  const { parsedData, setParsedData, setListeningProfile } = useAppContext()
+  const { parsedData, setParsedData, setListeningProfile, token } = useAppContext()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loadedInfo, setLoadedInfo] = useState<string | null>(null)
+  const [cloudSaving, setCloudSaving] = useState(false)
+  const [cloudLoading, setCloudLoading] = useState(false)
+  const [cloudInfo, setCloudInfo] = useState<string | null>(null)
 
   async function handleLoadFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
@@ -145,6 +149,17 @@ export function History() {
       setParsedData(data)
       setListeningProfile(buildListeningProfile(data))
       setLoadedInfo(`${files.length}ファイル・${data.totalEntries.toLocaleString()}件を読み込みました`)
+
+      // Auto-save stats to cloud if logged in
+      if (token) {
+        setCloudSaving(true)
+        saveHistoryStats(token, {
+          topArtists: data.topArtists.slice(0, 20).map(a => ({ artist: a.artist, totalMinutes: a.totalMinutes, playCount: a.playCount })),
+          topTracks: data.topTracks.slice(0, 20).map(t => ({ track: t.track, artist: t.artist, totalMinutes: t.totalMinutes, playCount: t.playCount })),
+          dateRange: data.dateRange,
+          totalEntries: data.totalEntries,
+        }).finally(() => setCloudSaving(false))
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -205,6 +220,34 @@ export function History() {
             </label>
             {error && <div style={{ color: C.accent, fontSize: '13px', marginTop: '10px' }}>{error}</div>}
           </div>
+
+          {/* Cloud restore (logged-in users only) */}
+          {token && (
+            <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: C.text }}>クラウドから復元</div>
+                <div style={{ fontSize: '11px', color: C.textDim, marginTop: '3px' }}>前回アップロードした統計データを読み込む</div>
+              </div>
+              <button
+                style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '12px', display: 'inline-block', cursor: cloudLoading ? 'not-allowed' : 'pointer', opacity: cloudLoading ? 0.6 : 1, whiteSpace: 'nowrap' }}
+                disabled={cloudLoading}
+                onClick={async () => {
+                  setCloudLoading(true)
+                  setError(null)
+                  const data = await fetchCloudData(token)
+                  setCloudLoading(false)
+                  if (!data?.historyStats) {
+                    setError('クラウドにデータが見つかりませんでした。先にファイルをアップロードしてください。')
+                    return
+                  }
+                  setCloudInfo(`クラウドから復元: ${data.historyStats.totalEntries.toLocaleString()}件 (${data.historyStats.uploadedAt?.slice(0, 10) ?? ''})`)
+                }}
+              >
+                {cloudLoading ? '読み込み中...' : '復元する'}
+              </button>
+            </div>
+          )}
+          {cloudInfo && <div style={{ fontSize: '11px', color: C.textMuted, marginTop: '10px', textAlign: 'center' }}>{cloudInfo}</div>}
         </div>
       </div>
     )
@@ -238,7 +281,10 @@ export function History() {
             音楽履歴レポート
           </h2>
           {loadedInfo && (
-            <div style={{ fontSize: '11px', color: C.textDim, marginTop: '4px' }}>{loadedInfo}</div>
+            <div style={{ fontSize: '11px', color: C.textDim, marginTop: '4px' }}>
+              {loadedInfo}
+              {cloudSaving && <span style={{ marginLeft: '8px', color: 'rgba(192,57,43,0.6)' }}>☁ 保存中...</span>}
+            </div>
           )}
         </div>
         <label style={{ ...s.loadBtn, padding: '8px 16px', fontSize: '13px', display: 'inline-block', cursor: 'pointer' }}>

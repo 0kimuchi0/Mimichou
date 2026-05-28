@@ -1,0 +1,88 @@
+import type { VercelRequest, VercelResponse } from '@vercel/node'
+import { createClient } from '@supabase/supabase-js'
+
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
+
+async function verifySpotifyToken(token: string) {
+  const res = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return {
+    id: data.id as string,
+    display_name: (data.display_name || data.id) as string,
+    image_url: (data.images?.[0]?.url ?? null) as string | null,
+  }
+}
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (req.method === 'OPTIONS') return res.status(200).end()
+
+  const auth = req.headers.authorization
+  if (!auth?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' })
+
+  const token = auth.slice(7)
+  const spotifyUser = await verifySpotifyToken(token)
+  if (!spotifyUser) return res.status(401).json({ error: 'Invalid Spotify token' })
+
+  // Upsert user record
+  await supabase.from('users').upsert({
+    id: spotifyUser.id,
+    display_name: spotifyUser.display_name,
+    image_url: spotifyUser.image_url,
+  })
+
+  if (req.method === 'GET') {
+    const [{ data: wl }, { data: hs }] = await Promise.all([
+      supabase.from('wishlists').select('items').eq('user_id', spotifyUser.id).maybeSingle(),
+      supabase.from('history_snapshots').select('*').eq('user_id', spotifyUser.id).maybeSingle(),
+    ])
+
+    return res.status(200).json({
+      wishlist: wl?.items ?? [],
+      historyStats: hs
+        ? {
+            topArtists: hs.top_artists,
+            topTracks: hs.top_tracks,
+            dateRange: hs.date_range,
+            totalEntries: hs.total_entries,
+            uploadedAt: hs.uploaded_at,
+          }
+        : null,
+    })
+  }
+
+  if (req.method === 'POST') {
+    const { type, data } = req.body as { type: string; data: unknown }
+
+    if (type === 'wishlist') {
+      await supabase.from('wishlists').upsert({
+        user_id: spotifyUser.id,
+        items: data,
+        updated_at: new Date().toISOString(),
+      })
+    } else if (type === 'history') {
+      const d = data as Record<string, unknown>
+      await supabase.from('history_snapshots').upsert({
+        user_id: spotifyUser.id,
+        top_artists: d.topArtists,
+        top_tracks: d.topTracks,
+        date_range: d.dateRange,
+        total_entries: d.totalEntries,
+        uploaded_at: new Date().toISOString(),
+      })
+    }
+
+    return res.status(200).json({ ok: true })
+  }
+
+  return res.status(405).json({ error: 'Method not allowed' })
+}
