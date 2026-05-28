@@ -240,7 +240,21 @@ export function History() {
                     setError('クラウドにデータが見つかりませんでした。先にファイルをアップロードしてください。')
                     return
                   }
-                  setCloudInfo(`クラウドから復元: ${data.historyStats.totalEntries.toLocaleString()}件 (${data.historyStats.uploadedAt?.slice(0, 10) ?? ''})`)
+                  const hs = data.historyStats
+                  const restored = {
+                    entries: [],
+                    topArtists: (hs.topArtists ?? []) as import('../lib/parser').ArtistStats[],
+                    topTracks: (hs.topTracks ?? []) as import('../lib/parser').TrackStats[],
+                    hourlyStats: [],
+                    dayStats: [],
+                    topArtistPerYear: [],
+                    nostalgicArtists: [],
+                    totalEntries: hs.totalEntries,
+                    dateRange: hs.dateRange,
+                  }
+                  setParsedData(restored)
+                  setListeningProfile(buildListeningProfile(restored))
+                  setLoadedInfo(`クラウドから復元: ${hs.totalEntries.toLocaleString()}件 (${hs.uploadedAt?.slice(0, 10) ?? ''})`)
                 }}
               >
                 {cloudLoading ? '読み込み中...' : '復元する'}
@@ -323,27 +337,29 @@ export function History() {
       {/* 1. Top 20 Artists Bar Chart */}
       <div style={s.section}>
         <h3 style={s.sectionTitle}>アーティスト別 総再生時間 Top 20</h3>
-        <ResponsiveContainer width="100%" height={480}>
-          <BarChart
-            data={artistChartData}
-            layout="vertical"
-            margin={{ top: 0, right: 80, left: 140, bottom: 0 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(192,57,43,0.15)" />
-            <XAxis type="number" tick={{ fill: C.textMuted, fontSize: 11 }} />
-            <YAxis
-              type="category"
-              dataKey="artist"
-              tick={{ fill: C.text, fontSize: 12 }}
-              width={140}
-            />
-            <Tooltip
-              contentStyle={tooltipStyle}
-              formatter={(val: number) => [formatMinutes(val), '再生時間']}
-            />
-            <Bar dataKey="minutes" fill={C.accent} radius={[0, 3, 3, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div style={{ height: `${artistChartData.length * 44 + 20}px` }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={artistChartData}
+              layout="vertical"
+              margin={{ top: 0, right: 80, left: 140, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(192,57,43,0.15)" />
+              <XAxis type="number" tick={{ fill: C.textMuted, fontSize: 11 }} />
+              <YAxis
+                type="category"
+                dataKey="artist"
+                tick={{ fill: C.text, fontSize: 12 }}
+                width={140}
+              />
+              <Tooltip
+                contentStyle={tooltipStyle}
+                formatter={(val: number) => [formatMinutes(val), '再生時間']}
+              />
+              <Bar dataKey="minutes" fill={C.accent} radius={[0, 3, 3, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* 2. Top Artist Per Year */}
